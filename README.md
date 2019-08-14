@@ -1,5 +1,5 @@
 # rec_systems
-Implementations of Recommender Systems
+Implementations of popular Recommender Systems
 ## Collaborative Filtering
 - Jaccard CF:
     - Uses Jaccard similarity as metric for a KNN-based collaborative filtering model.
