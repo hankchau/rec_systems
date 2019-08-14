@@ -1,5 +1,5 @@
 # rec_systems
-Implementations of popular Recommender Systems
+Implementations of Popular Recommender Systems
 ## General Matrix Factorization 
 - GMF:
     - Uses embedding layers with Dot Product operation to find latent features of dimension k for recommendation.
