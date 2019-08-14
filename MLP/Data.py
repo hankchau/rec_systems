@@ -6,6 +6,8 @@ import pandas as pd
 Using all positive instances
 """
 
+NEG_RATIO = 3
+
 class DataParse:
 
     def get_test_data(self, testfile):
@@ -86,7 +88,7 @@ class DataParse:
         self.neg_len = len(self.neg_data['CST_ID'])
         self.pos_len = len(self.pos_train['CST_ID'])
         # self.NEG_SAMPLE_RATIO = int(self.neg_len/self.pos_len)
-        self.NEG_SAMPLE_RATIO = 3
+        self.NEG_SAMPLE_RATIO = NEG_RATIO
 
         # get ratings
         self.pos_train['Rating'] = [1] * self.pos_len
@@ -129,6 +131,7 @@ def main(trainfile, testfile):
     data.get_test_data(testfile)
 
     print('finished reading data')
+
 
 if __name__ == '__main__':
     main(sys.argv[1], sys.argv[2])
