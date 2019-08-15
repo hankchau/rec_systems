@@ -1,7 +1,10 @@
 2019/07/15  
-Using Jaccard Similarity for similarity metric in KNN. 
-Using Item-based for a shorter runtime. Scoring Metric tbd ...
-2019/07/19  
-Scoring Metric: Whether the first k nearest neighbors contain more 0s or 1s for a given row/column.
+-Using User-based
+-Candidate similiarity metrics: Jaccard, Pearson, Cosine, Euclid 
+2019/07/18  
+-Using Jaccard for similiarity matrix. 
+  -Data is binary (0, 1), so Pearson and Cosine not suitable.
+  -Jaccard calculates |Intersection| / |Union|, which fits our need for checking the similarity of user-item relations between users. 
+-Scoring Metric: Whether the first k nearest neighbors contain more 0s or 1s for a given row/column.
 2019/07/20  
-Finished Implementations/Evaluation
+-Finished Implementations/Evaluation
