@@ -4,7 +4,7 @@ Most recommender systems use collaborative filtering (CF), which relies on calcu
 Many methods, such as matrix factorization (MF) and L1 Regularization, have been proposed to solve the data sparsity problem. MF aims to find latent features that approximate the behavior for each user and each item. "Blank spaces", can then be filled by mapping each latent user-item pair. I will only focus on MF here, and leave other methods for future exploration. 
 
 ## Dataset
-- The same dataset is used for the different models presented. For anonymity, the dataset presented captures customer-to-hedgefund relationships in a binary format.
+- The same dataset is used for the different models presented. For anonymity, I have only presented a matrix that captures customer to hedgefund relations in a binary format, where '1' records the existence of a relation between a customer-hedgefund pair, and '0' represents a blank space where no data is available.
 
 ## General Matrix Factorization 
 - GMF:
@@ -26,7 +26,7 @@ Many methods, such as matrix factorization (MF) and L1 Regularization, have been
 - NeuMF:
     - Combines MLP and GMF models into a hybrid neural network for recommendation.
     - Weights non-linear mappings (DNN in MLP) and linear mappings (dot product in GMF) for better estimation.
-    - Model concept proposed in *Neural Collaborative Filtering* by Xiangnan He, Lizi Liao, et al, 2017. 
+    - Model concept proposed in *Neural Collaborative Filtering* by Xiangnan He, Lizi Liao et al, 2017. 
     - Link to Paper: https://arxiv.org/pdf/1708.05031.pdf
 
 ## Collaborative Filtering
