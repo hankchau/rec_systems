@@ -267,5 +267,6 @@ if __name__ == '__main__':
     outpath = cd
     # gmf_weights = cd + '/gmf_model_save.hdf5'
     # mlp_weights = cd + '/mlp_model_save.hdf5'
+    #NeuMF_weights = cd + '/NeuMF_model_save.hdf5'
 
     main(datafile, outpath)
