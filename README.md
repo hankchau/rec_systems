@@ -4,7 +4,7 @@ Most recommender systems use collaborative filtering (CF), which relies on calcu
 Many methods, such as matrix factorization (MF) and L1 Regularization, have been proposed to solve the data sparsity problem. MF aims to find latent features that approximate the behavior for each user and each item. "Blank spaces", can then be filled by mapping each latent user-item pair to a rating value. By approximating this value on . I will only focus on MF here, and leave other methods for future exploration. 
 
 The implementations of models here are my own work, but the Neural Network based model concepts are based on *Neural Collaborative Filtering* by Xiangnan He, Lizi Liao et al, 2017. 
-    - Link to Paper: https://arxiv.org/pdf/1708.05031.pdf
+- Link to Paper: https://arxiv.org/pdf/1708.05031.pdf
 
 ## Dataset
 The same dataset is used for the different models presented. For anonymity, I have only presented a table that captures customer to hedgefund relations in a binary format, where '1' records the existence of a relation between a customer-hedgefund pair, and '0' represents a blank space where no data is available. The matrix has a sparsity of 77%. 
