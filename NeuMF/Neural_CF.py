@@ -19,14 +19,16 @@ from keras.optimizers import Adam
 from keras.layers import Embedding, Flatten, Concatenate, Dense
 from keras import Input, initializers, regularizers, callbacks
 
+# HYPER-PARAMETERS
+THRESHOLD = 0.5
 LATENT_DIM = 128
-LEARN_RATE = 0.0005
+REG_SCALE = 0.01
 
 BATCH_SIZE = 256
-EPOCHS = 10
-ITERATIONS = 3
+LEARN_RATE = 0.0005
 
-REG_SCALE = 0.01
+EPOCHS = 20
+ITERATIONS = 5
 
 
 class NeuralCF:
@@ -109,8 +111,8 @@ class NeuralCF:
 
         print('fitting NCF model on train data ...')
         inputs = {
-            'cust_Input': cust_train,
-            'fund_Input': fund_train
+            'MLP_cust_Input': cust_train,
+            'MLP_fund_Input': fund_train
         }
 
         self.history = self.ncf_model.fit(
@@ -126,13 +128,11 @@ class NeuralCF:
                 callbacks.EarlyStopping(
                     monitor='val_loss', mode='min', patience=3),
                 callbacks.ModelCheckpoint(
-                    filepath=(outpath + '/unweighted_model_save.hdf5'),
+                    filepath=(outpath + '/mlp_model_save.hdf5'),
                     monitor='val_loss',
                     save_best_only=True, mode='min', period=1)
             ]
         )
-
-        self.ncf_model.save_weights(outpath + '/unweighted_model_weights.hdf5')
 
         return self.history
 
@@ -167,12 +167,12 @@ class NeuralCF:
 
             rate = self.rates[indx]
             # condition
-            if rate >= 0.5:
+            if rate >= THRESHOLD:
                     self.predictions[custID].append(fundID)
 
 
     def save_predict(self, outpath):
-        outpath += '/unweighted_MLP_predictions.csv'
+        outpath += '/mlp_predictions_' + str(THRESHOLD) + '.csv'
         with open(outpath, 'w') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(['CST_ID', 'Fund_ID'])
@@ -186,7 +186,6 @@ def main(datafile, outpath):
     data.read_train_file(datafile)
     data.get_train_data()
     # data.get_test_data(testfile)
-    perm = np.random.permutation(len(data.train_data['CST_ID']))
 
     ncf = NeuralCF()
     ncf.build_model(
@@ -198,6 +197,7 @@ def main(datafile, outpath):
 
     for i in range(ITERATIONS):
         print('Iteration: '+ str(i))
+        perm = np.random.permutation(len(data.train_data['CST_ID']))
         ncf.fit(data, batch_size=BATCH_SIZE, epochs=EPOCHS, outpath=outpath, perm=perm)
         data.get_train_data()
 

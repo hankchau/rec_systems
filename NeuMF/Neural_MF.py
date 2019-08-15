@@ -1,5 +1,6 @@
 import sys
 import csv
+import os
 import numpy as np
 import keras_metrics as km
 
@@ -12,36 +13,28 @@ from keras.models import Model
 from keras.optimizers import SGD
 from keras.layers import Concatenate, Dense
 
-# weighting for MLP
-ALPHA = 0.5
-LEARN_RATE = 0.0001
+
+# HYPER-PARAMETERS
+ALPHA = 0.5 # weighting for MLP
+THRESHOLD = 0.6
 
 BATCH_SIZE = 256
-EPOCHS = 10
-ITERATIONS = 3
+LEARN_RATE = 0.1
+
+EPOCHS = 20
+ITERATIONS = 5
 
 
 class Recommender:
 
     def __init__(self):
-        print('building Neural MF model ...')
+        print('preparing Neural MF model ...')
 
-    def build_model(self, pretrain):
+    def build_model(self, pretrain, set_weights=False):
 
-        # setting up gmf
+        # setting up gmf / mlp
         gmf = pretrain.gmf
-        gmf_weights = gmf.gmf_model.layers[-1].get_weights()
-        gmf_weights = [w * (1 - ALPHA) for w in gmf_weights]
-        gmf.gmf_model.layers.pop()
-
-        # setting up mlp
         mlp = pretrain.ncf
-        mlp_weights = mlp.ncf_model.layers[-1].get_weights()
-        mlp_weights = [w * ALPHA for w in mlp_weights]
-        mlp.ncf_model.layers.pop()
-
-        predict_weights = np.concatenate((gmf_weights[0], mlp_weights[0]), axis=0)
-        predict_biases = gmf_weights[1] + gmf_weights[1]
 
         # build model concat
         self.NeuMFLayer = Concatenate(axis=-1, name='NeuMF_Layer')([gmf.mul, mlp.hiddenLayer3])
@@ -53,15 +46,32 @@ class Recommender:
                     mlp.MLP_custInputLayer, mlp.MLP_fundInputLayer],
             outputs=[self.predictLayer]
         )
+
+        if set_weights:
+            self.set_initial(pretrain)
+
+        gmf.gmf_model.layers.pop()
+        mlp.ncf_model.layers.pop()
+
+
+    def set_initial(self, pretrain):
+        print()
+        # setting up gmf
+        gmf = pretrain.gmf
+        gmf_weights = gmf.gmf_model.layers[-1].get_weights()
+        gmf_weights = [w * (1 - ALPHA) for w in gmf_weights]
+        gmf.gmf_model.layers.pop()
+
+        # setting up mlp
+        mlp = pretrain.ncf
+        mlp_weights = mlp.ncf_model.layers[-1].get_weights()
+        mlp_weights = [w * ALPHA for w in mlp_weights]
+
+        predict_weights = np.concatenate((gmf_weights[0], mlp_weights[0]), axis=0)
+        predict_biases = gmf_weights[1] + gmf_weights[1]
+
         self.NeuMF.get_layer('Prediction').set_weights([predict_weights, predict_biases])
 
-        self.NeuMF.compile(
-            optimizer=SGD(lr=LEARN_RATE),
-            loss='binary_crossentropy',
-            metrics=['acc', km.binary_precision(0), km.binary_recall(0)]
-        )
-        print('compiling NeuMF Model ...')
-        print(self.NeuMF.summary())
 
     def fit(self, data, outpath, perm, batch_size=BATCH_SIZE, epochs=EPOCHS):
         cust_train = np.array(data.train_data['CST_ID'])[perm]
@@ -94,8 +104,6 @@ class Recommender:
             ]
         )
 
-        # self.NeuMF.save_weights(outpath + '/NeuMF_model_weights.hdf5')
-
         return self.history
 
     def predict(self, data):
@@ -103,24 +111,32 @@ class Recommender:
         pred_funds = data.neg_data['FND_ID']
 
         self.rates = self.NeuMF.predict(
-            x=[np.array(pred_custs), np.array(pred_funds)],
+            x=[np.array(pred_custs), np.array(pred_funds),
+               np.array(pred_custs), np.array(pred_funds)],
             batch_size=256
         )
 
+        self.rating_table = []
         self.predictions = {}
-        for indx in range(len(pred_custs)):
+        for indx in range(len(data.neg_data['CST_ID'])):
             custID = data.train_custs[pred_custs[indx]]
             fundID = data.funds[pred_funds[indx]]
             if custID not in self.predictions:
                 self.predictions[custID] = []
 
-            rate = self.rates[indx]
+            rate = self.rates[indx][0]
+
+            # update rating table
+            row = [custID, fundID, str(int(rate*10000)/100)+'%']
+            self.rating_table.append(row)
+
             # condition
-            if rate >= 0.5:
-                    self.predictions[custID].append(fundID)
+            if rate >= THRESHOLD:
+                # update predictions
+                self.predictions[custID].append(fundID)
 
     def save_predict(self, outpath):
-        outpath += '/NeuMF_predictions.csv'
+        outpath += '/NeuMF_predictions_' + str(THRESHOLD) + '.csv'
         with open(outpath, 'w') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(['CST_ID', 'Fund_ID'])
@@ -128,6 +144,19 @@ class Recommender:
             for key, value in self.predictions.items():
                 line = [key] + value
                 writer.writerow(line)
+
+    def save_pred_table(self, outpath):
+        outpath = outpath + '/NeuMF_ratings_table_' + str(THRESHOLD) + '.csv'
+        with open(outpath, 'w') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(['CST_ID', 'Fund_ID', 'Rating'])
+
+            for row in self.rating_table:
+                writer.writerow(row)
+
+    def load_NeuMF(self, savefile):
+        print('loading NeuMF model weights from ' + savefile)
+        self.NeuMF.load_weights(savefile)
 
 
 class PreTrainer:
@@ -138,14 +167,13 @@ class PreTrainer:
         self.build_GMF(data)
 
     # pretrain entire model
-    def get_pretrain(self, data, outpath, perm):
+    def get_pretrain(self, data, outpath):
+        self.perm = np.random.permutation(len(data.train_data['CST_ID']))
         self.train_MLP(data, outpath)
         self.train_GMF(data, outpath)
-        self.perm = perm
+
 
     def load_weights(self, mlp_file, gmf_file):
-        print('loading pretrained model weights ...')
-
         self.ncf.ncf_model.load_weights(mlp_file)
         self.gmf.gmf_model.load_weights(gmf_file)
 
@@ -176,37 +204,68 @@ class PreTrainer:
         for i in range(iteration):
             self.ncf.fit(data=data, outpath=outpath, perm=self.perm)
             data.get_train_data()
+        self.ncf.predict(data)
+        self.ncf.save_predict(outpath)
 
     def train_GMF(self, data, outpath, iteration=GMF.ITERATIONS):
         for i in range(iteration):
             self.gmf.fit(data=data, outpath=outpath, perm=self.perm)
             data.get_train_data()
+        self.gmf.predict(data)
+        self.gmf.save_predict(outpath)
 
 
-def main(datafile, outpath, gmf_weights=None, mlp_weights=None):
+def main(datafile, outpath, gmf_weights=None, mlp_weights=None, NeuMF_weights=None):
     data = Data.DataParse()
     data.read_train_file(datafile)
     data.get_train_data()
 
     pt = PreTrainer(data)
-    perm = np.random.permutation(len(data.train_data['CST_ID']))
-
-    # load pretrained model
-    if len(sys.argv) > 3:
-        pt.load_weights(mlp_file=mlp_weights, gmf_file=gmf_weights)
-    else:
-        pt.get_pretrain(data, outpath, perm)
 
     rc = Recommender()
-    rc.build_model(pretrain=pt)
+
+    # if NeuMF weights provided
+    if NeuMF_weights:
+        print('loading weights for NeuMF Model ...')
+        rc.build_model(pretrain=pt)
+        rc.load_NeuMF(NeuMF_weights)
+    else:
+        # load pretrained model weights
+        if gmf_weights and mlp_weights:
+            print('loading weights for GMF and MLP models ...')
+            pt.load_weights(mlp_file=mlp_weights, gmf_file=gmf_weights)
+        # pretrain from scratch
+        else:
+            print('pretraining from scratch ...')
+            pt.get_pretrain(data, outpath)
+
+        rc.build_model(pretrain=pt, set_weights=True)
+
+    rc.NeuMF.compile(
+        optimizer=SGD(lr=LEARN_RATE),
+        loss='binary_crossentropy',
+        metrics=['acc', km.binary_precision(0), km.binary_recall(0)]
+    )
+    print('compiling NeuMF Model ...')
+    print(rc.NeuMF.summary())
 
     for i in range(ITERATIONS):
+        print('Iteration: ' + str(i))
+        perm = np.random.permutation(len(data.train_data['CST_ID']))
+
         rc.fit(data, outpath, perm=perm, batch_size=BATCH_SIZE, epochs=EPOCHS)
         data.get_train_data()
 
     rc.predict(data)
+    rc.save_pred_table(outpath)
     rc.save_predict(outpath)
 
 
 if __name__ == '__main__':
-    main(sys.argv[1], sys.argv[2], gmf_weights=sys.argv[3], mlp_weights=sys.argv[4])
+    cd = os.getcwd()
+    datafile = cd + '/cst_fund_chart.csv'
+    outpath = cd
+    # gmf_weights = cd + '/gmf_model_save.hdf5'
+    # mlp_weights = cd + '/mlp_model_save.hdf5'
+
+    main(datafile, outpath)
