@@ -9,7 +9,7 @@ The implementations of models here are my own work, but the Neural Network based
 ## Dataset
 The same dataset is used for the different models presented. For anonymity, I have only presented a table that captures customer to hedgefund relations in a binary format, where '1' records the existence of a relation between a customer-hedgefund pair, and '0' represents a blank space where no data is available. The matrix has a sparsity of 77%. 
 
-Note that each '0' in the table simply corresponds to a **_lack of data_, and not a negative relationship**. To trian a neural network, we would need labeled training data in both classes ('1' and '0'). To account for training data with label '0', random negative sampling is used with a ratio of 3 negative instances per positive instance. Since negative samples are assumed, and there is an imbalance between positive and negative samples, class weights can be incorporated in training.
+Note that each '0' in the table simply corresponds to a **_lack of data_, and not a negative relationship**. To trian a neural network, we would need labeled training data in both classes ('1' and '0'). To account for training data with label '0', random negative sampling is used with a ratio of 3 negative instances per positive instance. Since negative samples are assumed, and there is an imbalance between positive and negative samples, class weights favoring positive samples can be incorporated in training.
 
 ## Metrics
 Since we are mostly interested in positive predictions, accuracy no longer determines the model's performance. The important metrics to track are **Validation Loss, and Recall**. Validation loss helps prevent overfitting, and recall measures the portion of true positives the model predicts. 
