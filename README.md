@@ -20,7 +20,7 @@ A low precision is also expected and acceptable, since most of our training and 
 - GMF:
     - Neural network based approach.
     - Embedding layers to find latent features of dimension k for users and items.
-    - Matrix dot product to map latent features to a probability P('1'|latent_features).
+    - Matrix dot product to map latent features to a probability P('1' | latent_features).
     - Adam with fast learn rate. Binary crossentropy as loss function.
     - Fragile, very sensitive to class weights.
     - Fast convergence. Fixed epochs. 
@@ -30,7 +30,7 @@ A low precision is also expected and acceptable, since most of our training and 
 - MLP:
     - Deep neural network based approach.
     - Embedding layers to find latent features of dimension k for users and items.
-    - Multilayer perceptron to map latent features to a probability P('1'|latent_features).
+    - Multilayer perceptron to map latent features to a probability P('1' | latent_features).
     - Adam with slow learn rate, Binary crossentropy as loss function.
     - More robust than GMF. 
     - Slow convergence. Hard to find early stopping criteria. 
