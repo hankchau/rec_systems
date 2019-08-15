@@ -1,7 +1,7 @@
 # Recommender Systems for Sparse Data
-- Most recommender systems use collaborative filtering (CF), which relies on calculating similarity, to capture accurate user-item relations. With better computing power, and the rising popularity of machine learning, many researchers are applying deep neural networks (DNNs) to recommender systems. However, since raw data collected from the real world is often incomplete, sparsity is a huge and prevalent problem. CF methods and DNNs have both shown to perform poorly without sufficient data. 
+Most recommender systems use collaborative filtering (CF), which relies on calculating similarity, to capture accurate user-item relations. With better computing power, and the rising popularity of machine learning, many researchers are applying deep neural networks (DNNs) to recommender systems. However, since raw data collected from the real world is often incomplete, sparsity is a huge and prevalent problem. CF methods and DNNs have both shown to perform poorly without sufficient data. 
 
-- Many methods, such as matrix factorization (MF) and L1 Regularization, have been proposed to solve the data sparsity problem. MF aims to find latent features that approximate the behavior for each user and each item. "Blank spaces", can then be filled by mapping each latent user-item pair. I will only focus on MF here, and leave other methods for future exploration. 
+Many methods, such as matrix factorization (MF) and L1 Regularization, have been proposed to solve the data sparsity problem. MF aims to find latent features that approximate the behavior for each user and each item. "Blank spaces", can then be filled by mapping each latent user-item pair. I will only focus on MF here, and leave other methods for future exploration. 
 
 ## Dataset
 - The same dataset is used for the different models presented. For anonymity, the dataset presented captures customer-to-hedgefund relationships in a binary format.
