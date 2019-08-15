@@ -21,7 +21,7 @@ THRESHOLD = 0.6
 BATCH_SIZE = 256
 LEARN_RATE = 0.1
 
-EPOCHS = 20
+EPOCHS = 100
 ITERATIONS = 5
 
 
@@ -96,7 +96,7 @@ class Recommender:
             shuffle=True,
             callbacks=[
                 callbacks.EarlyStopping(
-                    monitor='val_loss', mode='min', patience=3),
+                    monitor='val_loss', mode='min', patience=7),
                 callbacks.ModelCheckpoint(
                     filepath=(outpath + '/NeuMF_model_save.hdf5'),
                     monitor='val_loss',
