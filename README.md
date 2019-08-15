@@ -39,6 +39,7 @@ A low precision is also expected and acceptable, since most of our training and 
 ## Neural Matrix Factorization 
 - NeuMF:
     - Combines MLP and GMF models into a hybrid neural network for recommendation.
+    - Uses pretrained MLP and GMF parts for faster convergence. 
     - Weights non-linear mappings (MLP) and linear mappings (GMF) for better estimation.
     - Stochastic GD with slow learn rate. Binary crossentropy as loss function.
     - Robust. Behavior similar to MLP.
