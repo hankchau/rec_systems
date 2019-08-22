@@ -12,9 +12,8 @@ The same dataset is used for the different models presented. For anonymity, I ha
 Note that each '0' in the table simply corresponds to a **_lack of data_, and not a negative relationship**. To trian a neural network, we would need labeled training data in both classes ('1' and '0'). To account for training data with label '0', random negative sampling is used with varying ratios of one positive instance to few negative instances. Since negative samples are assumed, and there is an imbalance between positive and negative samples, class weights favoring positive samples can be incorporated in training.
 
 ## Metrics
-Since we are mostly interested in positive predictions, accuracy no longer determines the model's performance. The important metrics to track are **Validation Loss, Precision, and Recall**. Validation loss helps prevent overfitting, and recall measures the portion of true positives the model predicts. 
+tbd
 
-A low precision is also expected and acceptable, since most of our training and validation sets are labeled as negative, and we wouldn't want to discourage our model in predicting '1's.
 
 ## General Matrix Factorization 
 - GMF:
