@@ -12,7 +12,7 @@ The same dataset is used for the different models presented. The dataset is pres
 Note that each '0' in the table simply corresponds to a **_lack of data_, and not a negative relationship**. To trian a neural network, we would need labeled training data in both classes ('1' and '0'). To account for training data with label '0', random negative sampling is used with varying ratios of one positive instance to a few negative instances. Since negative samples are assumed, and there is an imbalance between positive and negative samples, class weights favoring positive samples can be incorporated in training.
 
 ## Metrics
-Since we are only interested in positive interactions ('1's), we will not be using accuracy as am important measurement. Accuracy will only be used to determine whether the model is learning at all. Instead **Precision** and **Recall** (hit rate and capture rate) will be used to measure our model's performance. All NN models are set up with Early Stopping using "val_loss". 
+Since we are only interested in positive interactions ('1's), we will not be using accuracy as am important measurement. Accuracy will only be used to determine whether the model is learning at all. Instead **Precision** and **Recall** (hit rate and capture rate) will be used to measure our model's performance. All NN models are set up with binary crossentropy as loss function and Early Stopping using "val_loss".
 
 
 ## General Matrix Factorization 
@@ -53,10 +53,10 @@ Since we are only interested in positive interactions ('1's), we will not be usi
     - Item-based CF to save runtime when computing similarity. (There are 4180 items and > 60,000 customers)
     
 ## Auto Encoders
-- autoencoder:
+- Autoencoder:
     - Unsupervised Learning.
     - Encoder for latent feature extraction.
-    - Decoder for reconstruction from latent feature.
+    - Decoder for reconstruction from latent features.
     - User-based feature extraction. 
     - Results TBD.
     
