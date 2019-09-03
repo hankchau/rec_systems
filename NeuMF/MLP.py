@@ -1,20 +1,31 @@
+"""
+CF Recommender System
+By Hank Chau
+
+Model credits to:
+Neural Collaborative Filtering (2017)
+https://arxiv.org/pdf/1708.05031.pdf
+
+"""
 import os
-import sys
 import csv
+import sys
+from math import inf
 import numpy as np
 import keras_metrics as km
 import matplotlib.pyplot as plt
 
 import Data
 
-from math import inf
 from keras.models import Model
 from keras.optimizers import Adam
-from keras.layers import Embedding, Flatten, Dot, Multiply, Dense, Dropout
+from keras.layers import Embedding, Flatten, Concatenate, Dense, Dropout
 from keras import Input, regularizers, callbacks
 
+
 # HYPER-PARAMETERS
-LATENT_DIM = 64
+THRESHOLD = 0.6
+LATENT_DIM = 128
 REG_SCALE = 0.000001
 
 BATCH_SIZE = 4096
@@ -25,63 +36,24 @@ ITERATIONS = 500
 PATIENCE = 20
 
 
-class GMF:
+class NeuralCF:
+
     def __init__(self):
-        print('pre-training GMF ...')
+        print('building Neural CF model ...')
         self.history = {}
 
-    # default method uses dot product for combining layer
-    def build_model(self, cust_dim, fund_dim, latent_dim, lr, dot=False, mul=True):
-        print('building GMF model ...')
+    def build_model(self, cust_dim, fund_dim, latent_dim=LATENT_DIM, lr=LEARN_RATE):
+        self.build_embedding(cust_dim, fund_dim, latent_dim)
+        self.build_mlp_layers()
 
-        # customer input embedding layer
-        self.GMF_custInputLayer = Input(shape=(1,), dtype='float', name='GMF_cust_Input')
-        cust_embedding = Embedding(
-            trainable=True,
-            input_dim=cust_dim,
-            output_dim=latent_dim,
-            embeddings_regularizer=regularizers.l2(REG_SCALE),
-            name='GMF_cust_Embedding'
-        )
-        # fund input embedding layer
-        self.GMF_fundInputLayer = Input(shape=(1,), dtype='float', name='GMF_fund_Input')
-        fund_embedding = Embedding(
-            trainable=True,
-            input_dim=fund_dim,
-            output_dim=latent_dim,
-            embeddings_regularizer=regularizers.l2(REG_SCALE),
-            name='GMF_fund_Embedding'
-        )
-        # Flatten input latent layers
-        self.userLatentLayer = Flatten(name='GMF_cust_Latent')(cust_embedding(self.GMF_custInputLayer))
-        self.fundLatentLayer = Flatten(name='GMF_fund_Latent')(fund_embedding(self.GMF_fundInputLayer))
+        print('finished building model')
+        metrics = [km.binary_precision(0), km.binary_recall(0)]
 
-        # check which combination to use
-        if dot:
-            self.dot = Dot(axes=-1, name='Dot_Layer')([self.userLatentLayer, self.fundLatentLayer])
-            self.predictions = Dense(1, activation='sigmoid', name='prediction')(self.dot)
-        elif mul:
-            # element-wise multiplication
-            self.mul = Multiply(name='Mul_Layer')([self.userLatentLayer, self.fundLatentLayer])
-            self.drop = Dropout(0.5)(self.mul)
-            self.predictions = Dense(1, activation='sigmoid', name='prediction')(self.drop)
-
-        # build model
-        self.gmf_model = Model(
-            inputs=[self.GMF_custInputLayer, self.GMF_fundInputLayer],
-            output=self.predictions
-        )
-        print('GMF Model Architecture: ')
-        print(self.gmf_model.summary())
-
-        self.metrics = [km.binary_precision(0), km.binary_recall(0)]
-
-        print('compiling GMF model ...')
-        # compile GMF model
-        self.gmf_model.compile(
+        # compile neural CF model
+        self.ncf_model.compile(
             optimizer=Adam(lr=lr),
             loss='binary_crossentropy',
-            metrics=self.metrics
+            metrics=metrics
         )
 
         # update history dict
@@ -92,7 +64,64 @@ class GMF:
         self.history['loss'] = []
         self.history['val_loss'] = []
 
+        print('compiling Neural CF model ...')
+        print(self.ncf_model.summary())
+
+
+    def build_embedding(self, cust_dim, fund_dim, latent_dim):
+        # customer input embedding layer
+        self.MLP_custInputLayer = Input(shape=(1,), dtype='float', name='MLP_cust_Input')
+        cust_embedding = Embedding(
+            input_dim=cust_dim,
+            output_dim=latent_dim,
+            embeddings_regularizer=regularizers.l2(REG_SCALE),
+            name='MLP_cust_Embedding'
+        )
+
+        # hedgefund input embedding layer
+        self.MLP_fundInputLayer = Input(shape=(1,), dtype='float', name='MLP_fund_Input')
+        fund_embedding = Embedding(
+            input_dim=fund_dim,
+            output_dim=latent_dim,
+            embeddings_regularizer=regularizers.l2(REG_SCALE),
+            name='MLP_fund_Embedding'
+        )
+
+        # flatten embedding layers
+        self.userLatentLayer = Flatten(name='MLP_cust_latent')(cust_embedding(self.MLP_custInputLayer))
+        self.fundLatentLayer = Flatten(name='MLP_fund_latent')(fund_embedding(self.MLP_fundInputLayer))
+
+
+    def build_mlp_layers(self):
+        # Neural CF Layers (MLP)
+        # mlp input layer
+        self.mlpInputLayer = Concatenate(axis=-1, name='MLP_input')([self.userLatentLayer, self.fundLatentLayer])
+
+        # drop layer
+        self.dropLayer = Dropout(0.5, name='MLP_Drop')(self.mlpInputLayer)
+
+        # hidden layer 0
+        self.hiddenLayer0 = Dense(LATENT_DIM*2, activation='relu', name='MLP_Hidden0')(self.dropLayer)
+
+        # hidden layer 1
+        self.hiddenLayer1 = Dense(LATENT_DIM, activation='relu', name='MLP_Hidden1')(self.hiddenLayer0)
+
+        # hidden layer 2
+        self.hiddenLayer2 = Dense(int(LATENT_DIM/2), activation='relu', name='MLP_Hidden2')(self.hiddenLayer1)
+
+        # hidden Layer 3
+        self.hiddenLayer3 = Dense(int(LATENT_DIM/4), activation='relu', name='MLP_Hidden3')(self.hiddenLayer2)
+
+        # output layer
+        self.predictLayer = Dense(1, activation='sigmoid', name='Prediction')(self.hiddenLayer3)
+
+        self.ncf_model = Model(
+            inputs=[self.MLP_custInputLayer, self.MLP_fundInputLayer],
+            outputs=[self.predictLayer]
+        )
+
     def fit(self, data, outpath, perm_train, perm_val, batch_size=BATCH_SIZE, epochs=EPOCHS):
+
         cust_train = np.array(data.train_data['CST_ID'])[perm_train]
         fund_train = np.array(data.train_data['FND_ID'])[perm_train]
         pred_train = np.array(data.train_data['Rating'])[perm_train]
@@ -101,35 +130,33 @@ class GMF:
         fund_val = np.array(data.val_data['FND_ID'])[perm_val]
         pred_val = np.array(data.val_data['Rating'])[perm_val]
 
-        print('fitting GMF model on train data ...')
+        print('fitting NCF model on train data ...')
         inputs_train = {
-            'GMF_cust_Input': cust_train,
-            'GMF_fund_Input': fund_train
+            'MLP_cust_Input': cust_train,
+            'MLP_fund_Input': fund_train
         }
-
         inputs_val = {
-            'GMF_cust_Input': cust_val,
-            'GMF_fund_Input': fund_val
+            'MLP_cust_Input': cust_val,
+            'MLP_fund_Input': fund_val
         }
 
-        self.result = self.gmf_model.fit(
+        self.result = self.ncf_model.fit(
             x=inputs_train,
             y=pred_train,
-            validation_data=(inputs_val, pred_val),
-            # class_weight={1: 0.9, 0: 0.1},
+            # class_weight={1: 0.75, 0: 0.25},
             # class_weight='auto',
+            validation_data = (inputs_val, pred_val),
             batch_size=batch_size,
             epochs=epochs,
             shuffle=True
-
             # callbacks=[
-            # callbacks.EarlyStopping(monitor='val_loss', verbose=2, mode='min', patience=3),
-            # callbacks.ModelCheckpoint(
-            # filepath=(outpath + '/gmf_model_save.hdf5'),
-            # monitor='val_loss', verbose=2,
-            # save_best_only=True, mode='min', period=1)
+            #     callbacks.EarlyStopping(
+            #         monitor='val_loss', verbose=2,mode='min', patience=5),
+            #     callbacks.ModelCheckpoint(
+            #         filepath=(outpath + '/mlp_model_save.hdf5'),
+            #         monitor='val_loss', verbose=2,
+            #         save_best_only=True, mode='min', period=1)
             # ]
-
         )
 
         # update history
@@ -146,28 +173,24 @@ class GMF:
         plt.plot(self.history['recall'])
         plt.plot(self.history['val_precision'])
         plt.plot(self.history['val_recall'])
-        plt.title('Model Performance')
+        plt.title('MLP Model Performance')
         plt.ylabel('Percentage')
         plt.legend(['train precision', 'train recall',
                     'val precision', 'val recall'], loc='lower right')
-        # plt.show()
-        # plt.savefig(os.getcwd() + '/gmf_acc_history.png')
 
         plt.subplot(2, 1, 2)
         plt.plot(self.history['loss'])
         plt.plot(self.history['val_loss'])
-        # plt.title('Model Loss (Binary Crossentropy)')
         plt.ylabel('Loss')
         plt.xlabel('Epoch')
         plt.legend(['train loss', 'val loss'], loc='upper right')
-        # fig2.show()
-        plt.savefig(os.getcwd() + '/gmf_history.png')
+        plt.savefig(os.getcwd() + '/mlp_history.png')
 
     def predict(self, data):
         pred_custs = data.neg_data['CST_ID']
         pred_funds = data.neg_data['FND_ID']
 
-        self.rates = self.gmf_model.predict(
+        self.rates = self.ncf_model.predict(
             x=[np.array(pred_custs), np.array(pred_funds)],
             batch_size=4096
         )
@@ -181,11 +204,12 @@ class GMF:
 
             rate = self.rates[indx]
             # condition
-            if rate >= 0.5:
-                self.predictions[custID].append(fundID)
+            if rate >= THRESHOLD:
+                    self.predictions[custID].append(fundID)
+
 
     def save_predict(self, outpath):
-        outpath += '/gmf_predictions.csv'
+        outpath += '/mlp_predictions_' + str(THRESHOLD) + '.csv'
         with open(outpath, 'w') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(['CST_ID', 'Fund_ID'])
@@ -196,7 +220,6 @@ class GMF:
 
 
 def get_data(datafile):
-    # get data
     data = Data.DataParse()
     data.read_train_file(datafile)
     data.val_split()
@@ -206,32 +229,32 @@ def get_data(datafile):
 
     return data
 
+
 def main(outpath, datafile=None, data=None):
     if datafile:
         data = get_data(datafile)
 
-    gmf = GMF()
-    gmf.build_model(
+    ncf = NeuralCF()
+    ncf.build_model(
         cust_dim=data.train_custs_len,
         fund_dim=data.funds_len,
         latent_dim=LATENT_DIM,
         lr=LEARN_RATE,
-        mul=True
     )
 
     best_loss = inf
     counter = 0
     for i in range(ITERATIONS):
-        print('Iteration: ' + str(i))
+        print('Iteration: '+ str(i))
         perm_train = np.random.permutation(len(data.train_data['CST_ID']))
         perm_val = np.random.permutation(len(data.val_data['CST_ID']))
-        gmf.fit(data, outpath, perm_train=perm_train, perm_val=perm_val, batch_size=BATCH_SIZE, epochs=EPOCHS)
+        ncf.fit(data, batch_size=BATCH_SIZE, epochs=EPOCHS, outpath=outpath, perm_train=perm_train, perm_val=perm_val)
 
         # Early stopping
-        if best_loss >= gmf.history['val_loss'][-1]:
-            gmf.gmf_model.save(outpath + '/gmf_model_save.hdf5')
+        if best_loss >= ncf.history['val_loss'][-1]:
+            ncf.ncf_model.save(outpath + '/mlp_model_save.hdf5')
             original_loss = best_loss
-            best_loss = gmf.history['val_loss'][-1]
+            best_loss = ncf.history['val_loss'][-1]
             counter = 0
             print('best val_loss improved from ' + str(original_loss) +
                   ' to ' + str(best_loss) + '\nsaving model ...')
@@ -244,11 +267,11 @@ def main(outpath, datafile=None, data=None):
         # resample negative instances
         data.get_train_data()
 
-    gmf.plot_history()
-    gmf.predict(data)
-    gmf.save_predict(outpath)
+    ncf.plot_history()
+    ncf.predict(data)
+    ncf.save_predict(outpath)
 
-    return gmf
+    return ncf
 
 if __name__ == '__main__':
     cd = os.getcwd()
