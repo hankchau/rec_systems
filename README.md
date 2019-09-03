@@ -51,3 +51,14 @@ Since we are only interested in positive interactions ('1's), we will not be usi
     - Jaccard similarity as metric for a KNN-based collaborative filtering model.
     - Compared to other sim. metrics, Jaccard is relatively insensitive to sparse data. 
     - Item-based CF to save runtime when computing similarity. (There are 4180 items and > 60,000 customers)
+    
+## Auto Encoders
+- autoencoder:
+    - Unsupervised Learning.
+    - Encoder for latent feature extraction.
+    - Decoder for reconstruction from latent feature.
+    - User-based feature extraction. 
+    - Results TBD.
+    
+## Deep and Wide NN:
+- TBD.
