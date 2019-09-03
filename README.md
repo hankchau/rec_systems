@@ -7,7 +7,7 @@ The implementations of the models here are my own work, but the neural-network-b
 - Link to Paper: https://arxiv.org/pdf/1708.05031.pdf
 
 ## Dataset
-The same dataset is used for the different models presented. For anonymity, I have not presented a sample for the dataset. The dataset is presented as a table that captures customer to item relations in a binary format, where '1' records the existence of a relation between a customer-item pair, and '0' represents a blank space where no data is available. The matrix has a sparsity of 99.5%. I will consider putting up a fake dataset in the same format for visualization in the future. 
+The same dataset is used for the different models presented. The dataset is presented as a table that captures customer to item relations in a binary format, where '1' records the existence of a relation between a customer-item pair, and '0' represents a blank space where no data is available. The matrix has a sparsity of 99.5%. For anonymity, I have not presented a sample for the dataset. I will consider putting up a fake dataset in the same format for visualization in the future. 
 
 Note that each '0' in the table simply corresponds to a **_lack of data_, and not a negative relationship**. To trian a neural network, we would need labeled training data in both classes ('1' and '0'). To account for training data with label '0', random negative sampling is used with varying ratios of one positive instance to a few negative instances. Since negative samples are assumed, and there is an imbalance between positive and negative samples, class weights favoring positive samples can be incorporated in training.
 
