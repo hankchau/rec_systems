@@ -1,18 +1,20 @@
 import sys
 import random
+import numpy as np
 import pandas as pd
 
 """
 Using all positive instances
 """
 
-VAL_RATIO = 0.3
-NEG_RATIO = 3
+VAL_RATIO = 0.2
+NEG_RATIO = 19
+
 
 class DataParse:
 
     def get_train_data(self):
-        self.get_negative_sample()
+        self.get_neg_train()
 
         self.train_data = {'CST_ID': [], 'FND_ID': [], 'Rating': []}
         self.train_data['CST_ID'] = self.pos_train['CST_ID'] + (self.neg_train['CST_ID'])
@@ -62,6 +64,15 @@ class DataParse:
                     self.neg_data['FND_ID'].append(fund_indx)
             fund_indx += 1
 
+        # shuffle
+        perm_pos = np.random.permutation(len(self.pos_data['CST_ID']))
+        perm_neg = np.random.permutation(len(self.neg_data['CST_ID']))
+        self.pos_data['CST_ID'] = list(np.array(self.pos_data['CST_ID'])[perm_pos])
+        self.pos_data['FND_ID'] = list(np.array(self.pos_data['FND_ID'])[perm_pos])
+        self.neg_data['CST_ID'] = list(np.array(self.neg_data['CST_ID'])[perm_neg])
+        self.neg_data['FND_ID'] = list(np.array(self.neg_data['FND_ID'])[perm_neg])
+        print('finished shuffling data')
+
         self.funds_len = len(self.funds)
         self.train_custs_len = len(self.train_custs)
         # get lengths
@@ -74,13 +85,13 @@ class DataParse:
         # split pos data
         ratio = (1 - VAL_RATIO)
         split_indx = int(ratio * len(self.pos_data['CST_ID']))
-        self.pos_train = {'CST_ID': [], 'FND_ID': [], 'Rating':[]}
+        self.pos_train = {'CST_ID': [], 'FND_ID': [], 'Rating': []}
         self.pos_train['CST_ID'] = (self.pos_data['CST_ID'])[:split_indx]
         self.pos_train['FND_ID'] = (self.pos_data['FND_ID'])[:split_indx]
         self.pos_train_len = len(self.pos_train['CST_ID'])
         self.pos_train['Rating'] = [1] * self.pos_train_len
 
-        self.pos_val = {'CST_ID': [], 'FND_ID': [], 'Rating':[]}
+        self.pos_val = {'CST_ID': [], 'FND_ID': [], 'Rating': []}
         self.pos_val['CST_ID'] = (self.pos_data['CST_ID'])[split_indx:]
         self.pos_val['FND_ID'] = (self.pos_data['FND_ID'])[split_indx:]
         self.pos_val_len = len(self.pos_val['CST_ID'])
@@ -88,41 +99,57 @@ class DataParse:
 
         # split neg data
         split_indx = int(ratio * len(self.neg_data['CST_ID']))
-        self.neg_train_pool = {'CST_ID': [], 'FND_ID': [], 'Rating':[]}
+        self.neg_train_pool = {'CST_ID': [], 'FND_ID': [], 'Rating': []}
         self.neg_train_pool['CST_ID'] = (self.neg_data['CST_ID'])[:split_indx]
         self.neg_train_pool['FND_ID'] = (self.neg_data['FND_ID'])[:split_indx]
-        self.neg_train_pool['Rating'] = [0] * len(self.neg_train_pool['CST_ID'])
+        # self.neg_train_pool['Rating'] = [0] * len(self.neg_train_pool['CST_ID'])
 
-        self.neg_val = {'CST_ID': [], 'FND_ID': [], 'Rating':[]}
-        self.neg_val['CST_ID'] = (self.neg_data['CST_ID'])[split_indx:]
-        self.neg_val['FND_ID'] = (self.neg_data['FND_ID'])[split_indx:]
-        self.neg_val['Rating'] = [0] * len(self.neg_val['CST_ID'])
+        self.neg_val_pool = {'CST_ID': [], 'FND_ID': [], 'Rating': []}
+        self.neg_val_pool['CST_ID'] = (self.neg_data['CST_ID'])[split_indx:]
+        self.neg_val_pool['FND_ID'] = (self.neg_data['FND_ID'])[split_indx:]
+        # self.neg_val_pool['Rating'] = [0] * len(self.neg_val_pool['CST_ID'])
 
     # get negative instances from sampling
     def get_negative_sample(self):
 
         print('data: ' + str(self.pos_len + self.neg_len) +
-              '\n   positive: '+ str(self.pos_len) +
+              '\n   positive: ' + str(self.pos_len) +
               '\n   negative: ' + str(self.neg_len) +
-              '\n   sparsity: ' + str(self.neg_len/(self.neg_len + self.pos_len)) +
+              '\n   sparsity: ' + str(self.neg_len / (self.neg_len + self.pos_len)) +
               '\n   negative sample ratio: 1:' + str(self.NEG_SAMPLE_RATIO) +
               '\n   validation ratio: ' + str(VAL_RATIO))
 
-        # negative instance index
-        self.pool_len = len(self.neg_train_pool['CST_ID'])
-        neg_trainIndx = random.sample(range(0, self.pool_len),
-                                      int(self.pos_train_len * self.NEG_SAMPLE_RATIO))
-        self.neg_train = {'CST_ID': [], 'FND_ID': []}
+        self.get_neg_train()
+
+        self.val_pool_len = len(self.neg_val_pool['CST_ID'])
+        neg_valIndx = random.sample(range(0, self.val_pool_len),
+                                    int(self.pos_val_len * self.NEG_SAMPLE_RATIO))
+        self.neg_val = {'CST_ID': [], 'FND_ID': []}
 
         # negative instance samples
+        for indx in neg_valIndx:
+            self.neg_val['CST_ID'].append(self.neg_val_pool['CST_ID'][indx])
+            self.neg_val['FND_ID'].append(self.neg_val_pool['FND_ID'][indx])
+
+        # get ratings
+        self.neg_val_len = len(self.neg_val['CST_ID'])
+        self.neg_val['Rating'] = [0] * self.neg_val_len
+
+        print('\nvalidation sampled: ' + str(self.pos_val_len + self.neg_val_len) +
+              '\n   positive: ' + str(self.pos_val_len) +
+              '\n   negative: ' + str(self.neg_val_len))
+
+    def get_neg_train(self):
+        # negative training sample
+        self.train_pool_len = len(self.neg_train_pool['CST_ID'])
+        neg_trainIndx = random.sample(range(0, self.train_pool_len),
+                                      int(self.pos_train_len * self.NEG_SAMPLE_RATIO))
+        self.neg_train = {'CST_ID': [], 'FND_ID': []}
         for indx in neg_trainIndx:
             self.neg_train['CST_ID'].append(self.neg_train_pool['CST_ID'][indx])
             self.neg_train['FND_ID'].append(self.neg_train_pool['FND_ID'][indx])
-
-        # get ratings
         self.neg_train_len = len(self.neg_train['CST_ID'])
         self.neg_train['Rating'] = [0] * self.neg_train_len
-
         print('training sampled: ' + str(self.pos_train_len + self.neg_train_len) +
               '\n   positive: ' + str(self.pos_train_len) +
               '\n   negative: ' + str(self.neg_train_len))
@@ -132,6 +159,7 @@ def main(trainfile):
     data = DataParse()
     data.read_train_file(trainfile)
     data.val_split()
+    data.get_negative_sample()
     data.get_train_data()
     data.get_val_data()
 
